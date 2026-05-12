@@ -62,7 +62,7 @@ app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return res.status(401).json({ error: "이메일 또는 비밀번호가 올바르지 않습니다" });
-  const { data: profile } = await supabase.from("profiles").select("username").eq("id", data.user.id).single();
+  const { data: profile } = await supabaseAdmin.from("profiles").select("username").eq("id", data.user.id).maybeSingle();
   const isAdmin = data.user.email === ADMIN_EMAIL;
   res.json({ user: { ...data.user, username: profile?.username }, token: data.session.access_token, isAdmin });
 });
