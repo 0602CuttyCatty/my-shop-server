@@ -3,7 +3,7 @@ const cors = require("cors");
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
-app.use(cors({ origin: "https://my-shop-omega-nine.vercel.app" }));
+app.use(cors({ origin: ["https://my-shop-omega-nine.vercel.app", "http://localhost:5173"] }));
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -37,15 +37,24 @@ app.patch("/api/products/:id/stock", async (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   const { email, password, username } = req.body;
-  const { data: existing } = await supabase.from("profiles").select("id").eq("username", username).maybeSingle();
-  if (existing) return res.status(400).json({ error: "이미 사용 중인 아이디입니다" });
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) return res.status(400).json({ error: error.message });
-  console.log("회원가입 유저:", data.user?.id, "아이디:", username);
-  const { error: profileError } = await supabase.from("profiles").insert({ id: data.user.id, username });
-  if (profileError) console.error("프로필 저장 실패:", profileError.message);
-  else console.log("프로필 저장 성공");
-  res.json({ user: data.user });
+  try {
+    const { data: existing } = await supabase.from("profiles").select("id").eq("username", username).maybeSingle();
+    if (existing) return res.status(400).json({ error: "이미 사용 중인 아이디입니다" });
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) return res.status(400).json({ error: error.message });
+    console.log("회원가입 유저:", data.user?.id, "아이디:", username);
+    try {
+      const { error: profileError } = await supabase.from("profiles").insert({ id: data.user.id, username });
+      if (profileError) console.error("프로필 저장 실패:", profileError.message);
+      else console.log("프로필 저장 성공");
+    } catch (profileErr) {
+      console.error("프로필 저장 예외:", profileErr.message);
+    }
+    res.json({ user: data.user });
+  } catch (err) {
+    console.error("회원가입 전체 오류:", err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post("/api/auth/login", async (req, res) => {
