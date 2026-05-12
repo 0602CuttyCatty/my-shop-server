@@ -4,7 +4,7 @@ require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(cors());
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
