@@ -7,6 +7,7 @@ app.use(cors({ origin: ["https://my-shop-omega-nine.vercel.app", "http://localho
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY);
 const ADMIN_EMAIL = "erica28810602school@gmail.com";
 
 // ─── 상품 ───────────────────────────────────────────
@@ -44,7 +45,7 @@ app.post("/api/auth/register", async (req, res) => {
     if (error) return res.status(400).json({ error: error.message });
     console.log("회원가입 유저:", data.user?.id, "아이디:", username);
     try {
-      const { error: profileError } = await supabase.from("profiles").insert({ id: data.user.id, username });
+      const { error: profileError } = await supabaseAdmin.from("profiles").insert({ id: data.user.id, username });
       if (profileError) console.error("프로필 저장 실패:", profileError.message);
       else console.log("프로필 저장 성공");
     } catch (profileErr) {
