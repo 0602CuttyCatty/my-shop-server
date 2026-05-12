@@ -4,7 +4,7 @@ require("dotenv").config();
 const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "https://my-shop-omega-nine.vercel.app" }));
 app.use(express.json());
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
@@ -38,11 +38,14 @@ app.patch("/api/products/:id/stock", async (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   const { email, password, username } = req.body;
-  const { data: existing } = await supabase.from("profiles").select("id").eq("username", username).single();
+  const { data: existing } = await supabase.from("profiles").select("id").eq("username", username).maybeSingle();
   if (existing) return res.status(400).json({ error: "이미 사용 중인 아이디입니다" });
   const { data, error } = await supabase.auth.signUp({ email, password });
   if (error) return res.status(400).json({ error: error.message });
-  await supabase.from("profiles").insert({ id: data.user.id, username });
+  console.log("회원가입 유저:", data.user?.id, "아이디:", username);
+  const { error: profileError } = await supabase.from("profiles").insert({ id: data.user.id, username });
+  if (profileError) console.error("프로필 저장 실패:", profileError.message);
+  else console.log("프로필 저장 성공");
   res.json({ user: data.user });
 });
 
