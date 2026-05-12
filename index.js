@@ -131,21 +131,24 @@ app.delete("/api/cart/:id", async (req, res) => {
 
 // 장바구니에서 주문 (여러 상품 한번에)
 app.post("/api/orders/bulk", async (req, res) => {
-  const { user_id, items, exchange_items, offer_note } = req.body;
-  // items: [{ product_id, qty, cart_id }]
+  const { user_id, items, exchange_items } = req.body;
   const results = [];
   for (const item of items) {
-    const { data: product } = await supabase
+    const { data: product, error: productError } = await supabase
       .from("products").select("stock").eq("id", item.product_id).single();
-    if (!product || product.stock < item.qty) {
-      return res.status(400).json({ error: `재고가 부족합니다` });
+    console.log("재고 확인:", item.product_id, "재고:", product?.stock, "요청:", item.qty, "에러:", productError?.message);
+    if (productError || !product) {
+      return res.status(404).json({ error: `상품을 찾을 수 없습니다 (${item.product_id})` });
     }
-    const { data: order } = await supabase
+    if (product.stock < item.qty) {
+      return res.status(400).json({ error: `재고가 부족합니다 (재고: ${product.stock}, 요청: ${item.qty})` });
+    }
+    const { data: order, error: orderError } = await supabase
       .from("orders")
-      .insert({ user_id, product_id: item.product_id, qty: item.qty, exchange_items, offer_note, status: "pending" })
+      .insert({ user_id, product_id: item.product_id, qty: item.qty, exchange_items, status: "pending" })
       .select().single();
+    if (orderError) return res.status(500).json({ error: orderError.message });
     results.push(order);
-    // 장바구니에서 제거
     if (item.cart_id) await supabase.from("carts").delete().eq("id", item.cart_id);
   }
   res.json(results);
